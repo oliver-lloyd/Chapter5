@@ -75,3 +75,6 @@ valid:
   every: 5
   filter_with_test: true
   metric: mean_reciprocal_rank_filtered_with_test
+
+simple:
+  psi: 0.5
