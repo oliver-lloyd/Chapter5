@@ -6,7 +6,7 @@ ax_search:
   - is_ordered: true
     name: train.batch_size
     type: choice
-    values: [128, 256, 512]
+    values: [256, 512]
   - name: train.type
     type: choice
     values: [1vsAll, KvsAll, negative_sampling]
@@ -67,7 +67,6 @@ import: [simple]
 job.type: search
 negative_sampling.implementation: sp_po
 search.num_workers: 1
-search.on_error: continue
 search.type: ax
 train: {auto_correct: true, max_epochs: 500, subbatch_auto_tune: true}
 valid:
