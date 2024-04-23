@@ -26,7 +26,7 @@ drug_embeds = pd.merge(drugs, drug_embeds, left_index=True, right_index=True)
 drug_embeds.to_csv('drug_embeds.csv')
 
 
-# TODO: get gene embeds for bipartite GNN
+# Get gene embeds
 genes = []
 for name in node_index.node_name.values:
     try:
