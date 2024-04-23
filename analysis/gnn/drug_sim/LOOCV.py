@@ -64,7 +64,6 @@ for node_id in range(n_nodes):
         # Training loop
         early_stop_threshold = scheduler_patience * 5  # Try 5 rounds of reducing learning rate
         best_loss = 1e9
-        best_h = None
         epochs_since_improved = 0
         losses = []
         start = time()
@@ -80,6 +79,7 @@ for node_id in range(n_nodes):
                 time_to_best = time()-start
                 best_loss = train_loss.item()
                 best_h = h
+                best_epoch = epoch
                 epochs_since_improved = 0
             else:
                 epochs_since_improved += 1
@@ -94,7 +94,6 @@ for node_id in range(n_nodes):
         cosine = cosine_similarity(pred_vec, actual_vec).item()
 
         # Store results of split
-        best_epoch = epoch - early_stop_threshold
         split_outcome = [data.drug_index[node_id], node_id, cosine, best_loss, best_epoch, time_to_best]
         trace_df.loc[len(trace_df)] = split_outcome
         trace_df.to_csv('LOOCV_cosines.csv', index=False)
