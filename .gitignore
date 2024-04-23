@@ -1,3 +1,4 @@
 data/selfloops/*.txt
 .env
 **/testing.ipynb
+**/__pycache__

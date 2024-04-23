@@ -10,13 +10,15 @@ from time import time
 from model import GCN
 
 torch.manual_seed(12345)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f'Using CUDA: {torch.cuda.is_available()}')
 
 
 def train(model, optimizer, criterion, cosine_target=[1.0]):
     model.train()
     optimizer.zero_grad()  # Clear gradients.
     h = model(data.x, data.edge_index)  # Perform a single forward pass.
-    loss = criterion(h[data.train_mask], data.y[data.train_mask], torch.tensor(cosine_target)) # Compute the loss solely based on the training nodes.
+    loss = criterion(h[data.train_mask], data.y[data.train_mask], torch.tensor(cosine_target).to(device)) # Compute the loss solely based on the training nodes.
     loss.backward()  # Derive gradients.
     optimizer.step()  # Update parameters based on gradients.
     return loss, h
@@ -40,22 +42,22 @@ for node_id in range(n_nodes):
         print(f'Testing on node {node_id + 1}/{n_nodes}')
 
         # Re-instantiate graph
-        data = torch.load('drug_sim_pyg.pt')
+        data = torch.load('drug_sim_pyg.pt').to(device)
 
         # Create nodesplit masks
-        train_mask = torch.ones(data.num_nodes)
+        train_mask = torch.ones(data.num_nodes).to(device)
         train_mask[node_id] = 0
         train_mask = train_mask.to(bool)
         data.train_mask = train_mask
         data.test_mask = ~train_mask  # Invert bool tensor using tilde
         
         # Zero out features for test node
-        data.x[data.test_mask] = torch.zeros(data.x.shape[-1])  
+        data.x[data.test_mask] = torch.zeros(data.x.shape[-1]) .to(device) 
         
         # Configure model
-        model = GCN(data.num_features)
-        criterion = CosineEmbeddingLoss()  # Define loss criterion.
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.01)  # Define optimizer.
+        model = GCN(data.num_features).to(device)
+        criterion = CosineEmbeddingLoss().to(device)  # Define loss criterion.
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.01) # Define optimizer.
         scheduler_patience = 10
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=scheduler_patience)
         
