@@ -1,5 +1,5 @@
 import pandas as pd
-from torch import save, tensor, load
+from torch import save, tensor
 from torch_geometric.data import Data
 
 
@@ -10,12 +10,25 @@ raw_edgelist = pd.read_csv('../../../../Chapter4/data/processed/drug_projection_
 raw_edgelist2 = raw_edgelist.copy()
 raw_edgelist2['drug1'] = raw_edgelist['drug2']
 raw_edgelist2['drug2'] = raw_edgelist['drug1']
-edgelist = pd.concat([raw_edgelist, raw_edgelist2])
+raw_edgelist = pd.concat([raw_edgelist, raw_edgelist2])
 
-# Drug projection network is sparse so no need to filter for closest neighbours as in case of drug similarity network
+# No need to filter here, as was done for drug_similarity, as this graph is already sparse
+""" 
+# Filter for top k closest neighbours
+k = 10
+edgelist = []
+for drug, subdf in raw_edgelist.groupby('drug1'):
+    subdf.sort_values('normalised_weight', inplace=True, ascending=False)
+    topk = subdf.iloc[:k]
+    edgelist.append(topk)
+edgelist = pd.concat(edgelist)
+"""
+edgelist = raw_edgelist
 
-# Index nodes (if file doesnt exist run ../drug_sim/create_pyg_graph.py)
-drug_index = load('../drug_sim/drug_sim_pyg.pt').drug_index
+# Index nodes
+drugs = set(edgelist.drug1.unique()).union(set(edgelist.drug2.unique()))
+drug_index = {drug: i for i, drug in enumerate(drugs)}
+drug_index = drug_index | {drug_index[key]: key for key in drugs}  # Merge with inverted drug index for either-way indexing
 
 # Convert drug name to node id
 edgelist['drug1_id'] = [drug_index[s] for s in edgelist.drug1.values]
@@ -23,6 +36,7 @@ edgelist['drug2_id'] = [drug_index[s] for s in edgelist.drug2.values]
 
 # Load drug embeds
 drug_embeds = pd.read_csv('../../../data/drug_embeds.csv')
+drug_embeds.query('name in @drugs', inplace=True)
 drug_embeds['id'] = [drug_index[name] for name in drug_embeds.name.values]
 drug_embeds.sort_values('id', inplace=True)
 
