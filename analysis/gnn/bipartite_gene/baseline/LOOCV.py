@@ -32,7 +32,7 @@ except FileNotFoundError:
     trace_df = pd.DataFrame(columns=['left_out_node', 'left_out_ID', 'cosine_to_actual', 'best_train_loss', 'best_epoch', 'time_to_best'])
 
 # Load data to get node count
-n_nodes = torch.load('../drug_similarity_pyg.pt').num_nodes
+n_nodes = torch.load('../drug_projection_pyg.pt').num_nodes
 
 # Run LOOCV
 for node_id in range(n_nodes):
@@ -42,7 +42,7 @@ for node_id in range(n_nodes):
         print(f'Testing on node {node_id + 1}/{n_nodes}')
 
         # Re-instantiate graph
-        data = torch.load('../drug_similarity_pyg.pt').to(device)
+        data = torch.load('../drug_projection_pyg.pt').to(device)
 
         # Create nodesplit masks
         train_mask = torch.ones(data.num_nodes).to(device)
