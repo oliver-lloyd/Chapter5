@@ -1,0 +1,1 @@
+python ../../LOOCV.py ../drug_projection_pyg.pt

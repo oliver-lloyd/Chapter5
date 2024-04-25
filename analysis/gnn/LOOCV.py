@@ -2,12 +2,13 @@ import torch
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import argparse
 
 from torch.nn import CosineEmbeddingLoss
 from torch.nn.functional import cosine_similarity
 from time import time
 
-from model import GCN
+from baseline_model import GCN
 
 torch.manual_seed(12345)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -23,16 +24,24 @@ def train(model, optimizer, criterion, cosine_target=[1.0]):
     optimizer.step()  # Update parameters based on gradients.
     return loss, h
 
+parser = argparse.ArgumentParser()
+parser.add_argument('data_object_path')
+args = parser.parse_args()
+
+# Load data to get stats
+data = torch.load(args.data_object_path)
+n_nodes = data.num_nodes
+n_features = data.x.shape[-1]
 
 # Load partial results if they exist
 trace_path = 'LOOCV_cosines.csv'
+vectors_path = 'learned_vecs.csv'
 try:
     trace_df = pd.read_csv(trace_path)
+    learned_vecs = pd.read_csv(vectors_path)
 except FileNotFoundError:
     trace_df = pd.DataFrame(columns=['left_out_node', 'left_out_ID', 'cosine_to_actual', 'best_train_loss', 'best_epoch', 'time_to_best'])
-
-# Load data to get node count
-n_nodes = torch.load('../drug_projection_pyg.pt').num_nodes
+    learned_vecs = pd.DataFrame(columns=['drug'] + [str(i) for i in range(n_features)])
 
 # Run LOOCV
 for node_id in range(n_nodes):
@@ -42,7 +51,7 @@ for node_id in range(n_nodes):
         print(f'Testing on node {node_id + 1}/{n_nodes}')
 
         # Re-instantiate graph
-        data = torch.load('../drug_projection_pyg.pt').to(device)
+        data = torch.load(args.data_object_path).to(device)
 
         # Create nodesplit masks
         train_mask = torch.ones(data.num_nodes).to(device)
@@ -67,7 +76,7 @@ for node_id in range(n_nodes):
         epochs_since_improved = 0
         losses = []
         start = time()
-        for epoch in range(1001):
+        for epoch in range(1):
 
             # Calculate hidden layer and loss
             train_loss, h = train(model, optimizer, criterion)
@@ -97,6 +106,11 @@ for node_id in range(n_nodes):
         split_outcome = [data.drug_index[node_id], node_id, cosine, best_loss, best_epoch, time_to_best]
         trace_df.loc[len(trace_df)] = split_outcome
         trace_df.to_csv('LOOCV_cosines.csv', index=False)
+
+        # Store learned vector
+        vector_row = [data.drug_index[node_id]] + pred_vec.detach().numpy().tolist()[0]
+        learned_vecs.loc[len(learned_vecs)] = vector_row
+        learned_vecs.to_csv(vectors_path, index=False)
 
 # Plot results once done
 sns.boxplot(data=trace_df, y='cosine_to_actual')
