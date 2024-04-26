@@ -2,3 +2,4 @@ data/selfloops/*.txt
 .env
 **/testing.ipynb
 **/__pycache__
+analysis/gnn/**/holdout_scores

@@ -43,6 +43,7 @@ checkpoint['config'].set('dataset.name', F'{libkge_path}/data/selfloops')
 embeds = KgeModel.create_from(checkpoint).state_dict()
 rel_embeds = embeds['_relation_embedder._embeddings.weight'].to(device)
 ent_embeds = embeds['_entity_embedder._embeddings.weight'].to(device)
+n_dim = ent_embeds.shape[-1]
 
 # Create index dict for relation names
 rel_name_to_id = {}
@@ -69,25 +70,39 @@ try:
 except FileNotFoundError:
     results = pd.DataFrame(columns=['side_effect', 'fake_triple_component', 'AUROC', 'AUPRC', 'AP50'])
 
-# Iterate over holdout edges (by side effect) and score them
+# Load holdout data
 fake_holdout_path = env['THESIS_PATH'] + '/Chapter3/analysis/assessment/false_edges'
 holdout_edges = pd.read_csv(env['THESIS_PATH'] + '/Chapter5/data/selfloops/holdout.tsv', header=None, sep='\t')
+holdout_edges.columns=['drug1', 'side_effect', 'drug2']
 holdout_edges['is_real_edge'] = 1
+
+# Filter holdout edges if any nodes not in learned vectors (e.g. drug-gene projection only has half drugs)
+old_len = len(holdout_edges)
+drugs = list(learned_vecs.keys())
+holdout_edges.query('drug1 in @drugs', inplace=True)
+holdout_edges.query('drug2 in @drugs', inplace=True)
+new_len = len(holdout_edges)
+if new_len < old_len:
+    print(f'Warning: removed {old_len - new_len} holdout edges that contained nodes with no learned vectors. ')
+
+# Iterate over holdout edges (grouped by side effect) and score them
 scorer = SimplEScorer(checkpoint['config'], 'selfloops')
-n_dim = ent_embeds.shape[-1]
-for side_effect_name, real_edges in holdout_edges.groupby(1):
+for side_effect_name, real_edges in holdout_edges.groupby('side_effect'):
     if side_effect_name in results.side_effect.values:
         print(f'Result found for {side_effect_name}, skipping..')
     else:
         print(f'Processing {side_effect_name}')
         
     rel_embed = rel_embeds[rel_name_to_id[side_effect_name]].view(1, n_dim)
-    if side_effect_name == 'C0000731':
-        print(rel_embed)
 
-    # Create edge df to score
+    # Load fake holdout edges and filter
     false_edges = pd.read_csv(f'{fake_holdout_path}/{side_effect_name}.tsv', header=None, sep='\t')
+    false_edges.columns=['drug1', 'side_effect', 'drug2']
     false_edges['is_real_edge'] = 0
+    false_edges.query('drug1 in @drugs', inplace=True)
+    false_edges.query('drug2 in @drugs', inplace=True)
+
+    # Combine real with fake holdout edges and add placeholder score columns
     holdout_to_score = pd.concat([real_edges, false_edges])
     holdout_to_score['head_replaced_score'] = None
     holdout_to_score['tail_replaced_score'] = None
@@ -96,14 +111,14 @@ for side_effect_name, real_edges in holdout_edges.groupby(1):
     # Score all edges
     for i, row in holdout_to_score.iterrows():
         # Load head node info and vectors
-        head_drug = row[0]
+        head_drug = row['drug1']
         head_drug_id = ent_name_to_id[head_drug]
 
         head_agg = learned_vecs[head_drug].view(1, n_dim)
         head_embed = ent_embeds[head_drug_id].view(1, n_dim)
         
         # Same for tail node
-        tail_drug = row[2]
+        tail_drug = row['drug2']
         tail_drug_id = ent_name_to_id[tail_drug]
 
         tail_agg = learned_vecs[tail_drug].view(1, n_dim)
