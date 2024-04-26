@@ -76,7 +76,7 @@ for node_id in range(n_nodes):
         epochs_since_improved = 0
         losses = []
         start = time()
-        for epoch in range(1):
+        for epoch in range(1000):
 
             # Calculate hidden layer and loss
             train_loss, h = train(model, optimizer, criterion)
@@ -108,7 +108,7 @@ for node_id in range(n_nodes):
         trace_df.to_csv('LOOCV_cosines.csv', index=False)
 
         # Store learned vector
-        vector_row = [data.drug_index[node_id]] + pred_vec.detach().numpy().tolist()[0]
+        vector_row = [data.drug_index[node_id]] + pred_vec.detach().cpu().numpy().tolist()[0]
         learned_vecs.loc[len(learned_vecs)] = vector_row
         learned_vecs.to_csv(vectors_path, index=False)
 
