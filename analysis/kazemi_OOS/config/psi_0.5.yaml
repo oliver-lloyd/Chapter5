@@ -4,12 +4,13 @@ dataset.name: selfloops
 import: [simple]
 model: simple
 simple:
-  psi: 0.5
   entity_embedder.dropout: 0.067991
   relation_embedder.dropout: 0.125349
 
 lookup_embedder:
   dim: 256
+  psi: 0.5
+  neighbour_adjacency_file: drug_sim_edgelist.pt
   regularize: ''
   initialize: xavier_normal_
   initialize_args:
@@ -41,3 +42,4 @@ valid:
   metric: mean_reciprocal_rank_filtered_with_test
 
 eval: {batch_size: 256, metrics_per.relation_type: true}
+entity_ranking.tie_handling.warn_only: true
