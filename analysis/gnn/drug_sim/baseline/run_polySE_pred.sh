@@ -1,1 +1,0 @@
-python ../../../polySE_pred.py learned_vecs.csv
