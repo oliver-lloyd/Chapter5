@@ -26,6 +26,7 @@ import decagon_rank_metrics
 # Get user args
 parser = ArgumentParser()
 parser.add_argument('drug_vectors_path')
+parser.add_argument('checkpoint_path')
 args = parser.parse_args()
 
 # Load drug vectors
@@ -38,7 +39,7 @@ for i, row in learned_vecs_df.iterrows():
     learned_vecs[drug] = vec
 
 # Load chapter 3 relation embeddings
-checkpoint = load_checkpoint(env['THESIS_PATH'] + '/Chapter5/data/selfloops/checkpoint_best.pt')
+checkpoint = load_checkpoint(args.checkpoint_path)
 checkpoint['config'].set('dataset.name', F'{libkge_path}/data/selfloops')
 embeds = KgeModel.create_from(checkpoint).state_dict()
 rel_embeds = embeds['_relation_embedder._embeddings.weight'].to(device)
