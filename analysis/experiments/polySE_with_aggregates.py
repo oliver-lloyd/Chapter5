@@ -23,14 +23,8 @@ import sys
 sys.path.append(env['THESIS_PATH'] + '/Chapter3/analysis/assessment')
 import decagon_rank_metrics
 
-# Get user args
-parser = ArgumentParser()
-parser.add_argument('drug_vectors_path')
-parser.add_argument('checkpoint_path')
-args = parser.parse_args()
-
 # Load drug vectors
-learned_vecs_df = pd.read_csv(args.drug_vectors_path)
+learned_vecs_df = pd.read_csv('drug_sim_centroids.csv').drop(columns=['selfloops_id'])
 learned_vecs = {}
 for i, row in learned_vecs_df.iterrows():
     drug = row.drug
@@ -39,7 +33,7 @@ for i, row in learned_vecs_df.iterrows():
     learned_vecs[drug] = vec
 
 # Load chapter 3 relation embeddings
-checkpoint = load_checkpoint(args.checkpoint_path)
+checkpoint = load_checkpoint('checkpoint_best.pt')
 checkpoint['config'].set('dataset.name', F'{libkge_path}/data/selfloops')
 embeds = KgeModel.create_from(checkpoint).state_dict()
 rel_embeds = embeds['_relation_embedder._embeddings.weight'].to(device)
@@ -65,7 +59,7 @@ with open(f'{libkge_path}/data/selfloops/entity_ids.del', 'r') as f:
         ent_name_to_id[ent_name] = int(ent_id)
 
 # Load partial results if they exist
-results_path = 'polySE_results.csv'
+results_path = 'polySE_results_aggregations.csv'
 try:
     results = pd.read_csv(results_path)
 except FileNotFoundError:
@@ -77,6 +71,9 @@ holdout_edges = pd.read_csv(env['THESIS_PATH'] + '/Chapter5/data/selfloops/holdo
 holdout_edges.columns=['drug1', 'side_effect', 'drug2']
 holdout_edges['is_real_edge'] = 1
 
+""" This is currently not necessary as only doing OOS learning with drug-sim network.
+Same goes for the two 'false_edges.query()' lines in the loop below.
+
 # Filter holdout edges if any nodes not in learned vectors (e.g. drug-gene projection only has half drugs)
 old_len = len(holdout_edges)
 drugs = list(learned_vecs.keys())
@@ -85,6 +82,7 @@ holdout_edges.query('drug2 in @drugs', inplace=True)
 new_len = len(holdout_edges)
 if new_len < old_len:
     print(f'Warning: removed {old_len - new_len} holdout edges that contained nodes with no learned vectors. ')
+"""
 
 # Iterate over holdout edges (grouped by side effect) and score them
 scorer = SimplEScorer(checkpoint['config'], 'selfloops')
@@ -100,8 +98,8 @@ for side_effect_name, real_edges in holdout_edges.groupby('side_effect'):
     false_edges = pd.read_csv(f'{fake_holdout_path}/{side_effect_name}.tsv', header=None, sep='\t')
     false_edges.columns=['drug1', 'side_effect', 'drug2']
     false_edges['is_real_edge'] = 0
-    false_edges.query('drug1 in @drugs', inplace=True)
-    false_edges.query('drug2 in @drugs', inplace=True)
+    #false_edges.query('drug1 in @drugs', inplace=True)
+    #false_edges.query('drug2 in @drugs', inplace=True)
 
     # Combine real with fake holdout edges and add placeholder score columns
     holdout_to_score = pd.concat([real_edges, false_edges])
