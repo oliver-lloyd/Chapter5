@@ -19,21 +19,29 @@ model = KgeModel.create_from(checkpoint)
 node_embeds = model.state_dict()['_entity_embedder._embeddings.weight']
 neighbour_adj = model._entity_embedder.neighbour_adj
 
-out = pd.DataFrame(columns = ['drug', 'selfloops_id'] + [str(i) for i in range(node_embeds.shape[-1])])
+# Construct output df
+outfile_name = 'drug_sim_centroids.csv'
+try:
+    out = pd.read_csv(outfile_name)
+except FileNotFoundError:
+    out = pd.DataFrame(columns = ['drug', 'selfloops_id'] + [str(i) for i in range(node_embeds.shape[-1])])
+
+# Go
 for node_id, neighbours_sparse in enumerate(neighbour_adj):
     neighbour_ids = neighbours_sparse._indices()
     if neighbours_sparse._values().sum():  # Only drug nodes have neighbours here, skip the others
+        if node_id not in out.selfloops_id.values:  # Also skip if already done
+            print(node_id)
 
-        # Double check this is a drug node
-        drug_name = node_indexer[node_id]
-        assert drug_name.startswith('CID')  
+            # Double check this is a drug node
+            drug_name = node_indexer[node_id]
+            assert drug_name.startswith('CID')  
 
-        # Get centroid of neighbours' embeddings
-        neighbour_vecs = node_embeds[neighbour_ids][0]
-        centroid = neighbour_vecs.mean(dim=0)
+            # Get centroid of neighbours' embeddings
+            neighbour_vecs = node_embeds[neighbour_ids][0]
+            centroid = neighbour_vecs.mean(dim=0)
 
-        # Save
-        out_row = [drug_name, node_id] + centroid.tolist()
-        out.loc[len(out)] = out_row
-
-out.to_csv('drug_sim_centroids.csv', index=False)
+            # Save
+            out_row = [drug_name, node_id] + centroid.tolist()
+            out.loc[len(out)] = out_row
+            out.to_csv(outfile_name, index=False)
