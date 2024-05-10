@@ -13,6 +13,19 @@ name_to_id = {row[1]: row[0] for _, row in selfloops_ids.iterrows()}
 drug_sim_raw = pd.read_csv('../../../Chapter4/data/processed/drug_fingerprint_similarity.csv')
 drug_sim_raw = add_reverse_edges(drug_sim_raw)  # we DO need to add reverse edges here because similarity results go both ways which isnt represented in the csv. Filtered to closest ten anyway
 
+"""
+def n_neighbourless_at_threshold(df, threshold):
+    num_start = len(df.drug1.unique())
+    df = df.query(f'fingerprint_similarity >= {threshold}')
+    num_end = len(df.drug1.unique())
+    print(f'Started with {num_start}, ended with {num_end} after thresholding on similarity >= {threshold}')
+
+for i  in range(100):
+    t = i/100
+    n_neighbourless_at_threshold(drug_sim_raw, t)
+"""
+
+# Filter by n closest neighbours for each drug
 for n in [5, 10, 20]:
     drug_sim = []
     for drug, subdf in drug_sim_raw.groupby('drug1'):
