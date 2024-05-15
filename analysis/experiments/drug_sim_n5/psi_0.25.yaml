@@ -10,7 +10,7 @@ simple:
 lookup_embedder:
   dim: 256
   psi: 0.25
-  neighbour_edgelist_file: drug_sim_edgelist_nearest5.pt
+  neighbour_edgelist_file: tanimoto_edgelist_nearest5.pt
   regularize: ''
   initialize: xavier_normal_
   initialize_args:
