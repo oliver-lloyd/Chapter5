@@ -8,7 +8,9 @@ def add_reverse_edges(df):
     df2['drug2'] = df['drug1']
     return pd.concat([df, df2])
 
+
 if __name__ == '__main__':
+
     # Get drug indexer
     selfloops_ids = pd.read_csv('../../../kge/data/selfloops/entity_ids.del', sep='\t', header=None)
     name_to_id = {row[1]: row[0] for _, row in selfloops_ids.iterrows()}
