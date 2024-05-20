@@ -10,9 +10,9 @@ smiles_df = pd.read_csv('../../../../Chapter4/data/raw/canonical_smiles.csv')
 mols = [Chem.MolFromSmiles(smile_str) for smile_str in smiles_df['canonical smiles']]
 
 # Get Morgan fingerprints
-radius = 3  # default value
-morgan_gen = AllChem.GetMorganGenerator(radius)
-morgan_fprints = [morgan_gen.GetSparseCountFingerprint(mol) for mol in mols]
+radius = 3
+vec_len = 1024
+morgan_fprints = [AllChem.GetMorganFingerprintAsBitVect(mol, radius, vec_len) for mol in mols]
 
 # Get pairwise Tanimoto similarity
 out = []
