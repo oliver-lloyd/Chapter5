@@ -15,27 +15,31 @@ if __name__ == '__main__':
     selfloops_ids = pd.read_csv('../../../kge/data/selfloops/entity_ids.del', sep='\t', header=None)
     name_to_id = {row[1]: row[0] for _, row in selfloops_ids.iterrows()}
 
-    # Load SMILES similarity data
-    tanimoto_raw = pd.read_csv('../../../Chapter4/data/processed/drug_fingerprint_similarity.csv')
-    tanimoto_raw = add_reverse_edges(tanimoto_raw)  # we DO need to add reverse edges here because similarity results go both ways which isnt represented in the csv. Filtered to closest ten anyway
+    # Load RDK similarity data
+    RDK_raw = pd.read_csv('../../../Chapter4/data/processed/drug_fingerprint_similarity.csv')
+    RDK_raw = add_reverse_edges(RDK_raw)  # we DO need to add reverse edges here because similarity results go both ways which isnt represented in the csv. Filtered to closest ten anyway
 
     # Load MAP4 similarity data
     map4_raw = pd.read_csv('MAP4/MAP4_minhash.csv')
     map4_raw = add_reverse_edges(map4_raw)
 
+    # Load Morgan similarity data
+    morgan_raw = pd.read_csv('morgan_tanimoto/morgan_tanimoto.csv')
+    morgan_raw = add_reverse_edges(morgan_raw)
+
     # Filter by n closest neighbours for each drug
     for n in [5, 10, 20]:
 
-        # Using tanimoto coefficient of canonical SMILES
-        tanimoto = []
-        for drug, subdf in tanimoto_raw.groupby('drug1'):
+        # Using tanimoto coefficient of RDK fingerprints
+        RDK = []
+        for drug, subdf in RDK_raw.groupby('drug1'):
             subdf.sort_values('fingerprint_similarity', ascending=False, inplace=True)
-            tanimoto.append(subdf.iloc[:n])
-        tanimoto = pd.concat(tanimoto)
+            RDK.append(subdf.iloc[:n])
+        RDK = pd.concat(RDK)
 
-        tanimoto['id1'] = [name_to_id[name] for name in tanimoto.drug1.values]
-        tanimoto['id2'] = [name_to_id[name] for name in tanimoto.drug2.values]
-        tanimoto_out = tensor(tanimoto[['id1', 'id2']].to_numpy())
+        RDK['id1'] = [name_to_id[name] for name in RDK.drug1.values]
+        RDK['id2'] = [name_to_id[name] for name in RDK.drug2.values]
+        RDK_out = tensor(RDK[['id1', 'id2']].to_numpy())
         
 
         # Using MAP4 minhash
@@ -49,10 +53,23 @@ if __name__ == '__main__':
         map4['id2'] = [name_to_id[name] for name in map4.drug2.values]
         map4_out = tensor(map4[['id1', 'id2']].to_numpy())
 
+        # Using Morgan tanimoto
+        morgan = []
+        for drug, subdf in morgan_raw.groupby('drug1'):
+            subdf.sort_values('morgan_tanimoto', ascending=False, inplace=True)
+            morgan.append(subdf.iloc[:n])
+        morgan = pd.concat(morgan)
+
+        morgan['id1'] = [name_to_id[name] for name in morgan.drug1.values]
+        morgan['id2'] = [name_to_id[name] for name in morgan.drug2.values]
+        morgan_out = tensor(morgan[['id1', 'id2']].to_numpy())
+
         # Assert equivalence then save
-        assert map4_out.shape == tanimoto_out.shape
-        save(tanimoto_out, f'SMILES_tanimoto/tanimoto_edgelist_nearest{n}.pt')
-        save(map4_out, f'MAP4/map4_edgelist_nearest{n}.pt')
+        assert map4_out.shape == RDK_out.shape
+        assert morgan_out.shape == RDK_out.shape
+        save(RDK_out, f'RDK_tanimoto/RDK_nearest{n}.pt')
+        save(map4_out, f'MAP4/MAP4_nearest{n}.pt')
+        save(morgan_out, f'morgan_tanimoto/morgan_nearest{n}.pt')
 
     # Using drug-gene bipartite projection edges (no nearest-n performed)
     gene_bipartite = pd.read_csv('../../../Chapter4/data/processed/drug_projection_edges.csv')
