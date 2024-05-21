@@ -10,7 +10,7 @@ simple:
 lookup_embedder:
   dim: 256
   psi: 0.5
-  neighbour_edgelist_file: replace_me
+  neighbour_edgelist_file: RDK_nearest20.pt
   regularize: ''
   initialize: xavier_normal_
   initialize_args:
