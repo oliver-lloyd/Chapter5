@@ -10,7 +10,7 @@ def molecule_to_graph(molecule):
     return out
 
 
-def MCS_proportion(graphs, i, j):
+def MCS_proportion(graphs, i, j, outfile):
     g1 = graphs[i]
     g2 = graphs[j]
     matcher = nx.algorithms.isomorphism.GraphMatcher(
@@ -25,4 +25,5 @@ def MCS_proportion(graphs, i, j):
         out.append(proportion)
     else:
         out.append(0.0)
-    return out
+    with open(outfile, 'a') as f:
+        f.write(','.join(map(str, out)) + '\n')
