@@ -10,6 +10,11 @@ from kge.model import KgeModel
 from kge.util.io import load_checkpoint
 from kge.model.simple import SimplEScorer
 
+# Get user args
+parser = ArgumentParser()
+parser.add_argument('--posthoc_removal', action='store_true', default=False)
+args = parser.parse_args()
+
 # Disable pd warnings
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -37,6 +42,7 @@ checkpoint = load_checkpoint('checkpoint_best.pt')
 checkpoint['config'].set('dataset.name', F'{libkge_path}/data/selfloops')
 embeds = KgeModel.create_from(checkpoint).state_dict()
 rel_embeds = embeds['_relation_embedder._embeddings.weight'].to(device)
+
 ent_embeds = embeds['_entity_embedder._embeddings.weight'].to(device)
 n_dim = ent_embeds.shape[-1]
 
@@ -59,17 +65,25 @@ with open(f'{libkge_path}/data/selfloops/entity_ids.del', 'r') as f:
         ent_name_to_id[ent_name] = int(ent_id)
 
 # Load partial results if they exist
-results_path = 'polySE_results_aggregations.csv'
+results_path = 'polySE_results_aggregations.csv' if not args.posthoc_removal else 'polySE_posthoc_results_aggregations.csv'
 try:
     results = pd.read_csv(results_path)
 except FileNotFoundError:
     results = pd.DataFrame(columns=['side_effect', 'fake_triple_component', 'AUROC', 'AUPRC', 'AP50'])
+
+
 
 # Load holdout data
 fake_holdout_path = env['THESIS_PATH'] + '/Chapter3/analysis/assessment/false_edges'
 holdout_edges = pd.read_csv(env['THESIS_PATH'] + '/Chapter5/data/selfloops/holdout.tsv', header=None, sep='\t')
 holdout_edges.columns=['drug1', 'side_effect', 'drug2']
 holdout_edges['is_real_edge'] = 1
+
+# Load problem nodes if required
+if args.posthoc_removal:
+    neighbourless = pd.read_csv(f'{env["THESIS_PATH"]}/Chapter5/analysis/neighbours/neighbourless.csv')
+    ignore_nodes = neighbourless.drug.unique()
+    holdout_edges.query('drug1 not in @ignore_nodes and drug2 not in @ignore_nodes', inplace=True)
 
 """ This is currently not necessary as only doing OOS learning with drug-sim network.
 Same goes for the two 'false_edges.query()' lines in the loop below.
@@ -97,9 +111,9 @@ for side_effect_name, real_edges in holdout_edges.groupby('side_effect'):
     # Load fake holdout edges and filter
     false_edges = pd.read_csv(f'{fake_holdout_path}/{side_effect_name}.tsv', header=None, sep='\t')
     false_edges.columns=['drug1', 'side_effect', 'drug2']
+    if args.posthoc_removal:
+        false_edges.query('drug1 not in @ignore_nodes and drug2 not in @ignore_nodes', inplace=True)
     false_edges['is_real_edge'] = 0
-    #false_edges.query('drug1 in @drugs', inplace=True)
-    #false_edges.query('drug2 in @drugs', inplace=True)
 
     # Combine real with fake holdout edges and add placeholder score columns
     holdout_to_score = pd.concat([real_edges, false_edges])
@@ -134,7 +148,8 @@ for side_effect_name, real_edges in holdout_edges.groupby('side_effect'):
         holdout_to_score['both_replaced_score'][i] = both_score
 
     # Save calculated scores in case needed for future analysis
-    holdout_to_score.to_csv(f'holdout_scores/{side_effect_name}.csv', index=False)
+    if not args.posthoc_removal:
+        holdout_to_score.to_csv(f'holdout_scores/{side_effect_name}.csv', index=False)
 
     # Assess the outcome scores using usual metrics
     # Assess once per each variation of replaced triple components
