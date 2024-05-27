@@ -3,4 +3,5 @@ data/selfloops/*.txt
 **/testing.ipynb
 **/__pycache__
 analysis/experiments/**/*.pt
+analysis/experiments/**/*.out
 **/holdout_scores
