@@ -1,0 +1,46 @@
+dataset.name: selfloops
+entity_ranking.tie_handling.warn_only: true
+eval:
+  batch_size: 256
+  metrics_per.relation_type: true
+import:
+- simple
+job.type: train
+lookup_embedder:
+  dim: 256
+  initialize: xavier_normal_
+  initialize_args:
+    normal_:
+      mean: 0.0
+      std: 0.006737
+    xavier_normal_.gain: 1.0
+  neighbour_edgelist_file: morgan_nearest20.pt
+  psi: 1.0e-05
+  regularize: ''
+model: simple
+simple:
+  entity_embedder.dropout: 0.067991
+  relation_embedder.dropout: 0.125349
+train:
+  auto_correct: true
+  batch_size: 256
+  loss: kl
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_args:
+    factor: 0.5
+    mode: max
+    patience: 6
+    threshold: 0.0001
+  max_epochs: 480
+  optimizer: Adam
+  optimizer_args.lr: 0.010761
+  subbatch_auto_tune: true
+  type: 1vsAll
+valid:
+  early_stopping:
+    min_threshold.epochs: 480
+    min_threshold.metric_value: 0.01
+    patience: 5
+  every: 5
+  filter_with_test: true
+  metric: mean_reciprocal_rank_filtered_with_test
