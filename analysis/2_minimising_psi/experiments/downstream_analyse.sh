@@ -16,5 +16,5 @@ python ../../../scripts/polySE_with_aggregates.py
 #echo Getting POSTHOC polySE scores with aggregations;
 #python ../../../scripts/polySE_with_aggregates.py --posthoc_removal
 
-echo Getting polySE scores with actual embeds;
-sh ../../../scripts/polySE_with_true_embeds.sh;
+#echo Getting polySE scores with actual embeds;
+#sh ../../../scripts/polySE_with_true_embeds.sh;
