@@ -14,8 +14,8 @@ lookup_embedder:
       mean: 0.0
       std: 0.006737
     xavier_normal_.gain: 1.0
-  neighbour_edgelist_file: morgan_nearest20.pt
-  psi: 1.0e-05
+  neighbour_edgelist_file: RDK_nearest10.pt
+  psi: 0.01
   regularize: ''
 model: simple
 simple:

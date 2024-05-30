@@ -3,11 +3,11 @@ import yaml
 
 # Get info of best performing neighbourhood
 ranks = pd.read_csv('average_ranks.csv')
-best = ranks.iloc[0][['neighbourhood', 'nearest_n']]
-best_str = f'{best.neighbourhood}_n{best.nearest_n}'
+best = ranks.iloc[0][['Neighbourhood', 'Number of neighbours']]
+best_str = f'{best.Neighbourhood}_n{best["Number of neighbours"]}'
 
 # Load a corresponding config to use as a template
-template_path = f'../1_general_assessment/experiments/{best.neighbourhood}/{best_str}/{best_str}_psi_0.125.yaml'
+template_path = f'../1_general_assessment/experiments/{best.Neighbourhood}/{best_str}/{best_str}_psi_0.125.yaml'
 with open(template_path, 'r') as f:
     template_config = yaml.safe_load(f)
 
