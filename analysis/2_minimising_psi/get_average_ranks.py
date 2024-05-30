@@ -38,11 +38,14 @@ for tup, subdf in chap5.groupby(target_cols):
 
 # Order the combinations by those medians and write average rank statistics to file
 summary_df = summary_df.sort_values('median_AUPRC', ascending=False).reset_index(drop=True)
-out_df = pd.DataFrame(columns=target_cols[:-1] + ['mean_rank', 'median_rank'])
+out_df = pd.DataFrame(columns=target_cols[:-1] + ['mean_rank'])
 for tup, subdf in summary_df.groupby(['neighbourhood', 'nearest_n']):
-    out_row = list(tup) + [np.median(subdf.index), np.mean(subdf.index)]
+    out_row = list(tup) + [np.mean(subdf.index)]
     out_df.loc[len(out_df)] = out_row
 
 # Sort and save
-out_df.sort_values('mean_rank', inplace=True)
+out_df.columns = ['Neighbourhood', 'Number of neighbours', 'Mean rank']
+out_df.sort_values('Mean rank', inplace=True)
 out_df.to_csv('average_ranks.csv', index=False)
+with open('average_ranks.tex', 'w') as f:
+    f.write(out_df.to_latex(index=False))
