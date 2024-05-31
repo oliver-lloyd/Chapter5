@@ -19,7 +19,7 @@ def load_results(result_filename, exp_path='../1_general_assessment/experiments'
                         assert len(df) == target_len
                         df.to_csv(load_path)
                     df['psi'] = float(loc3.split('psi_')[-1])
-                    df['neighbourhood'] = neighbour_method
+                    df['neighbourhood'] = neighbour_method if neighbour_method != "morgan" else "Morgan"
                     df['nearest_n'] = nearest_n
                     df['Training'] = 'OOS-KGE'
                     out.append(df)
@@ -44,8 +44,10 @@ for tup, subdf in summary_df.groupby(['neighbourhood', 'nearest_n']):
     out_df.loc[len(out_df)] = out_row
 
 # Sort and save
-out_df.columns = ['Neighbourhood', 'Number of neighbours', 'Mean rank']
-out_df.sort_values('Mean rank', inplace=True)
+target_col = 'Mean rank'
+out_df.columns = ['Neighbourhood (N)', 'Number of neighbours (n)', target_col]
+out_df.sort_values(target_col, inplace=True)
+out_df[target_col] = [f'{val:.3f}' for val in out_df[target_col].values]  # Convert to str to quickly trim trailing zeros
 out_df.to_csv('average_ranks.csv', index=False)
 with open('average_ranks.tex', 'w') as f:
     f.write(out_df.to_latex(index=False))
