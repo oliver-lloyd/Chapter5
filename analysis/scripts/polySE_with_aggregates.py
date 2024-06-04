@@ -38,7 +38,16 @@ for i, row in learned_vecs_df.iterrows():
     learned_vecs[drug] = vec
 
 # Load chapter 3 relation embeddings
-checkpoint = load_checkpoint('checkpoint_best.pt')
+try:
+    checkpoint = load_checkpoint('checkpoint_best.pt')
+except OSError:
+    from os import listdir
+    checkpoint_files = [f for f in listdir() if f.endswith('.pt')]
+    n_checkpoints = len(checkpoint_files)
+    if n_checkpoints == 1:
+        checkpoint = load_checkpoint(checkpoint_files[0])
+    else:
+        raise FileNotFoundError(f'Couldn\'t find checkpoint_best, then found {n_checkpoints} other checkpoints. Please remove all except target checkpoint.')
 checkpoint['config'].set('dataset.name', F'{libkge_path}/data/selfloops')
 embeds = KgeModel.create_from(checkpoint).state_dict()
 rel_embeds = embeds['_relation_embedder._embeddings.weight'].to(device)

@@ -13,7 +13,16 @@ node_indexer = {row[1]: row[0] for _, row in selfloops_ids.iterrows()}
 node_indexer.update({node_indexer[key]: key for key in node_indexer})
 
 # Load model
-checkpoint = load_checkpoint('checkpoint_best.pt')
+try:
+    checkpoint = load_checkpoint('checkpoint_best.pt')
+except OSError:
+    from os import listdir
+    checkpoint_files = [f for f in listdir() if f.endswith('.pt')]
+    n_checkpoints = len(checkpoint_files)
+    if n_checkpoints == 1:
+        checkpoint = load_checkpoint(checkpoint_files[0])
+    else:
+        raise FileNotFoundError(f'Couldn\'t find checkpoint_best, then found {n_checkpoints} other checkpoints. Please remove all except target checkpoint.')
 checkpoint['config'].set('dataset.name', selfloops_data_path)
 model = KgeModel.create_from(checkpoint)
 node_embeds = model.state_dict()['_entity_embedder._embeddings.weight']
