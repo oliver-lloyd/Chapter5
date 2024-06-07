@@ -125,7 +125,7 @@ for side_effect_name, real_edges in holdout_edges.groupby('side_effect'):
     false_edges['is_real_edge'] = 0
 
     # Combine real with fake holdout edges and add placeholder score columns
-    holdout_to_score = pd.concat([real_edges, false_edges])
+    holdout_to_score = pd.concat([real_edges, false_edges]).reset_index(drop=True)
     holdout_to_score['head_replaced_score'] = None
     holdout_to_score['tail_replaced_score'] = None
     holdout_to_score['both_replaced_score'] = None
