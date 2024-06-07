@@ -90,7 +90,7 @@ holdout_edges['is_real_edge'] = 1
 
 # Load problem nodes if required
 if args.posthoc_removal:
-    neighbourless = pd.read_csv(f'{env["THESIS_PATH"]}/Chapter5/analysis/neighbours/neighbourless.csv')
+    neighbourless = pd.read_csv(f'{env["THESIS_PATH"]}/Chapter5/analysis/1_general_assessment/neighbours/neighbourless.csv')
     ignore_nodes = neighbourless.drug.unique()
     holdout_edges.query('drug1 not in @ignore_nodes and drug2 not in @ignore_nodes', inplace=True)
 
