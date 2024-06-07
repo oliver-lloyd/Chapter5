@@ -115,75 +115,75 @@ for side_effect_name, real_edges in holdout_edges.groupby('side_effect'):
     else:
         print(f'Processing {side_effect_name}')
         
-    rel_embed = rel_embeds[rel_name_to_id[side_effect_name]].view(1, n_dim)
+        rel_embed = rel_embeds[rel_name_to_id[side_effect_name]].view(1, n_dim)
 
-    # Load fake holdout edges and filter
-    false_edges = pd.read_csv(f'{fake_holdout_path}/{side_effect_name}.tsv', header=None, sep='\t')
-    false_edges.columns=['drug1', 'side_effect', 'drug2']
-    if args.posthoc_removal:
-        false_edges.query('drug1 not in @ignore_nodes and drug2 not in @ignore_nodes', inplace=True)
-    false_edges['is_real_edge'] = 0
+        # Load fake holdout edges and filter
+        false_edges = pd.read_csv(f'{fake_holdout_path}/{side_effect_name}.tsv', header=None, sep='\t')
+        false_edges.columns=['drug1', 'side_effect', 'drug2']
+        if args.posthoc_removal:
+            false_edges.query('drug1 not in @ignore_nodes and drug2 not in @ignore_nodes', inplace=True)
+        false_edges['is_real_edge'] = 0
 
-    # Combine real with fake holdout edges and add placeholder score columns
-    holdout_to_score = pd.concat([real_edges, false_edges]).reset_index(drop=True)
-    holdout_to_score['head_replaced_score'] = None
-    holdout_to_score['tail_replaced_score'] = None
-    holdout_to_score['both_replaced_score'] = None
-    
-    # Score all edges
-    for i, row in holdout_to_score.iterrows():
-        # Load head node info and vectors
-        head_drug = row['drug1']
-        head_drug_id = ent_name_to_id[head_drug]
-
-        head_agg = learned_vecs[head_drug].view(1, n_dim)
-        head_embed = ent_embeds[head_drug_id].view(1, n_dim)
+        # Combine real with fake holdout edges and add placeholder score columns
+        holdout_to_score = pd.concat([real_edges, false_edges]).reset_index(drop=True)
+        holdout_to_score['head_replaced_score'] = None
+        holdout_to_score['tail_replaced_score'] = None
+        holdout_to_score['both_replaced_score'] = None
         
-        # Same for tail node
-        tail_drug = row['drug2']
-        tail_drug_id = ent_name_to_id[tail_drug]
+        # Score all edges
+        for i, row in holdout_to_score.iterrows():
+            # Load head node info and vectors
+            head_drug = row['drug1']
+            head_drug_id = ent_name_to_id[head_drug]
 
-        tail_agg = learned_vecs[tail_drug].view(1, n_dim)
-        tail_embed = ent_embeds[tail_drug_id].view(1, n_dim)
+            head_agg = learned_vecs[head_drug].view(1, n_dim)
+            head_embed = ent_embeds[head_drug_id].view(1, n_dim)
+            
+            # Same for tail node
+            tail_drug = row['drug2']
+            tail_drug_id = ent_name_to_id[tail_drug]
 
-        # Score three ways, replacing one or both components with the learned aggregation each time
-        head_score = scorer.score_emb(head_agg, rel_embed, tail_embed, combine='spo').item()
-        holdout_to_score['head_replaced_score'][i] = head_score
+            tail_agg = learned_vecs[tail_drug].view(1, n_dim)
+            tail_embed = ent_embeds[tail_drug_id].view(1, n_dim)
 
-        tail_score = scorer.score_emb(head_embed, rel_embed, tail_agg, combine='spo').item()
-        holdout_to_score['tail_replaced_score'][i] = tail_score
+            # Score three ways, replacing one or both components with the learned aggregation each time
+            head_score = scorer.score_emb(head_agg, rel_embed, tail_embed, combine='spo').item()
+            holdout_to_score['head_replaced_score'][i] = head_score
 
-        both_score = scorer.score_emb(head_agg, rel_embed, tail_agg, combine='spo').item()
-        holdout_to_score['both_replaced_score'][i] = both_score
+            tail_score = scorer.score_emb(head_embed, rel_embed, tail_agg, combine='spo').item()
+            holdout_to_score['tail_replaced_score'][i] = tail_score
 
-    # Save calculated scores in case needed for future analysis
-    if not args.posthoc_removal:
-        holdout_to_score.to_csv(f'holdout_scores/{side_effect_name}.csv', index=False)
+            both_score = scorer.score_emb(head_agg, rel_embed, tail_agg, combine='spo').item()
+            holdout_to_score['both_replaced_score'][i] = both_score
 
-    # Assess the outcome scores using usual metrics
-    # Assess once per each variation of replaced triple components
-    for component in ['head', 'tail','both']:
-        target_column = f'{component}_replaced_score'
+        # Save calculated scores in case needed for future analysis
+        if not args.posthoc_removal:
+            holdout_to_score.to_csv(f'holdout_scores/{side_effect_name}.csv', index=False)
 
-        # Get area-under metrics
-        labels = holdout_to_score.is_real_edge.values
-        preds = holdout_to_score[target_column].values
-        roc = roc_auc_score(labels, preds)
-        prc = average_precision_score(labels, preds)
+        # Assess the outcome scores using usual metrics
+        # Assess once per each variation of replaced triple components
+        for component in ['head', 'tail','both']:
+            target_column = f'{component}_replaced_score'
 
-        # Get ap50
-        holdout_to_score.sort_values(target_column, ascending=False, inplace=True)
-        pos_index = holdout_to_score.query('is_real_edge == 1').index.values.tolist()
-        sorted_index = holdout_to_score.index.values.tolist()
-        ap50 = decagon_rank_metrics.apk(
-            pos_index,
-            sorted_index,
-            k=50
-        )
+            # Get area-under metrics
+            labels = holdout_to_score.is_real_edge.values
+            preds = holdout_to_score[target_column].values
+            roc = roc_auc_score(labels, preds)
+            prc = average_precision_score(labels, preds)
 
-        # Store outcome
-        results.loc[len(results)] = [side_effect_name, component, roc, prc, ap50]
-    
-    # Save partial results after every side effect
-    results.to_csv(results_path, index=False)
-    
+            # Get ap50
+            holdout_to_score.sort_values(target_column, ascending=False, inplace=True)
+            pos_index = holdout_to_score.query('is_real_edge == 1').index.values.tolist()
+            sorted_index = holdout_to_score.index.values.tolist()
+            ap50 = decagon_rank_metrics.apk(
+                pos_index,
+                sorted_index,
+                k=50
+            )
+
+            # Store outcome
+            results.loc[len(results)] = [side_effect_name, component, roc, prc, ap50]
+        
+        # Save partial results after every side effect
+        results.to_csv(results_path, index=False)
+        
